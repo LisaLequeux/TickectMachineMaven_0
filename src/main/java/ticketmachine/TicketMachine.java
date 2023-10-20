@@ -1,101 +1,96 @@
 package ticketmachine;
 
-/**
- * TicketMachine models a naive ticket machine that issues flat-fare tickets. The price of a ticket is specified via the
- * constructor. It is a naive machine in the sense that it trusts its users to insert enough money before trying to print a
- * ticket. It also assumes that users enter sensible amounts.
- *
- * @author David J. Barnes and Michael Kolling
- * @version 2006.03.30
- */
-public class TicketMachine {
-	// The price of a ticket from this machine.
-	private final int price;
-	// The amount of money entered by a customer so far.
-	private int balance;
-	// The total amount of money collected by this machine.
-	private int total;
+import static org.junit.jupiter.api.Assertions.*;
+import org.junit.jupiter.api.*;
 
-	/**
-	 * Create a machine that issues tickets of the given price.
-	 *
-	 * @param ticketCost the price of a ticket, >=0
-	 */
-	public TicketMachine(int ticketCost) {
-		// Test de validité du paramètre
-		if (ticketCost <= 0) {
-			throw new IllegalArgumentException("Ticket price must be positive");
-		}
-		price = ticketCost;
-		balance = 0;
-		total = 0;
+class TicketMachineTest {
+	private static final int PRICE = 50; // Une constante
+
+	private TicketMachine machine; // l'objet à tester
+
+	@BeforeEach
+	public void setUp() {
+		machine = new TicketMachine(PRICE); // On initialise l'objet à tester
 	}
 
-	/**
-	 * Return the price of a ticket.
-	 *
-	 * @return the price of tickets for this machine
-	 */
-	public int getPrice() {
-		return price;
+	@Test
+	// On vérifie que le prix affiché correspond au paramètre passé lors de l'initialisation
+	// S1 : le prix affiché correspond à l’initialisation.
+	void priceIsCorrectlyInitialized() {
+		// Paramètres : valeur attendue, valeur effective, message si erreur
+		assertEquals(PRICE, machine.getPrice(), "Initialisation incorrecte du prix");
 	}
 
-	/**
-	 * Return the total amount collected by the machine.
-	 *
-	 * @return the total amount collected by the machine.
-	 */
-	public int getTotal() {
-		return total;
+	@Test
+	// S2 : la balance change quand on insère de l’argent
+	void insertMoneyChangesBalance() {
+		machine.insertMoney(10);
+		machine.insertMoney(20);
+                // Les montants ont été correctement additionnés  
+		assertEquals(10 + 20, machine.getBalance(), "La balance n'est pas correctement mise à jour");              
 	}
 
-	/**
-	 * @return the amount of money already inserted for the next ticket.
-	 */
-	public int getBalance() {
-		return balance;
+	@Test
+	// S3 : on n’imprime pas leticket si le montant inséré est insuffisant
+	void notPrintTicketIfMoneyIsInsufficient(){
+		machine.insertMoney(PRICE-1);
+		assertFalse(machine.printTicket(),
+				"Le payement n'est pas effectué donc on n'imprime pas de ticket");
 	}
 
-	/**
-	 * Receive an amount of money in cents from a customer.
-	 *
-	 * @param amount the amount inserted, in cents (positive)
-	 * @throws IllegalArgumentException if amount is not positive
-	 */
-	public void insertMoney(int amount) {
-		balance = balance + amount;
+	@Test
+	// S4 : on imprime le ticket si le montant inséré est suffisant
+	void printTicketIfMoneyIsSufficient(){
+		machine.insertMoney(PRICE+1);
+		assertTrue(machine.printTicket(), "Payement effectué donc impression du ticket");
 	}
 
-	/**
-	 * Refunds the balance to customer
-	 *
-	 * @return the balance
-	 */
-	public int refund() {
-		int rendu = balance ;
-		System.out.println("Je vous rends : " + rendu + " centimes");
-		balance = 0 ;
-		return rendu;
+	@Test
+	// S5 : Quand on imprime un ticket la balance est décrémentée du prix du ticket
+	void decreasePriceOnBalance(){
+		machine.insertMoney(40);
+		machine.insertMoney(20); //on a 60 donc plus que le prix
+		machine.printTicket();
+		assertEquals(60-PRICE, machine.getBalance(),
+				"La balance a été correctement effectuée");
 	}
 
-	/**
-	 * Print a ticket. Update the total collected and reduce the balance 
-	 *
-	 * @return vrai si le ticket a été imprimé, faux sinon
-	 */
-	public boolean printTicket() {
-		if(balance>= price){
-		// Simulate the printing of a ticket.
-		System.out.println("##################");
-		System.out.println("# The BlueJ Line");
-		System.out.println("# Ticket");
-		System.out.println("# " + price + " cents.");
-		System.out.println("##################");
-		System.out.println();
-		balance = balance - price ;
-		total = total + price ;
-		return true;
-		}
-		return false ;
+	@Test
+	// S6 : le montant collecté est mis à jour quand on imprime un ticket (pas avant)
+	void BalanceUpdatePrintTicket(){
+		machine.insertMoney(70);
+		machine.printTicket();
+		assertEquals(PRICE, machine.getTotal()); // on doit obtenir 50
 	}
+
+	@Test
+	// S7 : refund()rendcorrectement la monnaie
+	void returnMoney(){
+		machine.insertMoney(70);
+		machine.printTicket();
+		assertEquals(machine.getBalance(), machine.refund()); // on doit obtenir 20
+	}
+
+	@Test
+	// S8 : refund()remet la balance à zéro
+	void pullBalanceToNull(){
+		machine.insertMoney(70);
+		machine.printTicket();
+		machine.refund();
+		assertEquals(0, machine.getBalance());
+	}
+
+	@Test
+	// S9 : on ne peut pas insérer un montant négatif
+	void cantInsertNegativeMoney(){
+		assertThrows(IllegalArgumentException.class, () -> {machine.insertMoney(-10);},
+		"La machine ne doit pas recevoir de motants négatifs ");
+	}
+
+	@Test
+	// S10 : on ne peut pas créer de machine qui délivre des tickets dont le prix est négatif
+	void cantCreateTicketWithPriceNegative(){
+		assertThrows(IllegalArgumentException.class, () -> {new TicketMachine(-1);},"");
+	}
+
 }
